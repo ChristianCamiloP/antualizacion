@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flujo de Trabajo - Entregables y Conexiones</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            margin: 0;
+            font-size: 2.5em;
+            font-weight: 700;
+        }
+        
+        .workflow-container {
+            padding: 40px;
+            position: relative;
+            background: #f8f9fa;
+        }
+        
+        .area-node {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            margin: 20px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            border-left: 5px solid;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+            min-height: 120px;
+        }
+        
+        .area-node:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.15);
+        }
+        
+        .area-node.sig { border-left-color: #ff6b6b; }
+        .area-node.reconocimiento { border-left-color: #4ecdc4; }
+        .area-node.ideep { border-left-color: #45b7d1; }
+        .area-node.calidad { border-left-color: #96ceb4; }
+        .area-node.direccion { border-left-color: #feca57; }
+        
+        .area-title {
+            font-size: 1.4em;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #2c3e50;
+        }
+        
+        .area-subtitle {
+            font-size: 0.9em;
+            color: #7f8c8d;
+            margin-bottom: 20px;
+        }
+        
+        .entregable-info {
+            display: none;
+            margin-top: 15px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+        }
+        
+        .entregable-info.active {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .info-item {
+            margin-bottom: 12px;
+            padding: 8px 12px;
+            background: white;
+            border-radius: 6px;
+            border-left: 3px solid #3498db;
+        }
+        
+        .info-label {
+            font-weight: 600;
+            color: #2c3e50;
+            display: inline-block;
+            min-width: 80px;
+        }
+        
+        .info-value {
+            color: #34495e;
+        }
+        
+        .connection-line {
+            position: absolute;
+            background: #3498db;
+            height: 3px;
+            border-radius: 2px;
+            z-index: 1;
+            opacity: 0.7;
+        }
+        
+        .connection-arrow {
+            position: absolute;
+            width: 0;
+            height: 0;
+            border-left: 8px solid #3498db;
+            border-top: 6px solid transparent;
+            border-bottom: 6px solid transparent;
+            z-index: 2;
+        }
+        
+        .workflow-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 30px;
+            position: relative;
+        }
+        
+        .legend {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 30px 0;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .legend h3 {
+            margin-top: 0;
+            color: #2c3e50;
+            font-size: 1.2em;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin: 10px 0;
+        }
+        
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+            margin-right: 10px;
+        }
+        
+        .toggle-info {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+        
+        .toggle-info:hover {
+            background: #2980b9;
+            transform: scale(1.1);
+        }
+        
+        .flow-sequence {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 30px 0;
+            text-align: center;
+        }
+        
+        .sequence-steps {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-top: 20px;
+        }
+        
+        .sequence-step {
+            background: rgba(255,255,255,0.2);
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin: 5px;
+            font-weight: 500;
+            min-width: 120px;
+        }
+        
+        .sequence-arrow {
+            font-size: 1.5em;
+            margin: 0 10px;
+            color: #feca57;
+        }
+        
+        .communication-section {
+            margin: 40px 0;
+            padding: 30px;
+            background: linear-gradient(135deg, #f093fb 0%, #000000 100%);
+            border-radius: 15px;
+            color: white;
+        }
+        
+        .communication-section h2 {
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2em;
+            font-weight: 300;
+        }
+        
+        .communication-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        
+        .comm-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 12px;
+            padding: 20px;
+            color: #2c3e50;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+        }
+        
+        .comm-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.2);
+        }
+        
+        .comm-icon {
+            font-size: 2.5em;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+        
+        .comm-title {
+            font-size: 1.2em;
+            font-weight: 600;
+            text-align: center;
+            margin-bottom: 15px;
+            color: #2c3e50;
+        }
+        
+        .comm-content {
+            font-size: 0.95em;
+            line-height: 1.6;
+        }
+        
+        .comm-content ul {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+        
+        .comm-content li {
+            margin: 5px 0;
+        }
+        
+        .folder-structure {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px 0;
+            border-left: 4px solid #3498db;
+        }
+        
+        .folder-item {
+            padding: 5px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            color: #34495e;
+        }
+        
+        .operational { border-left: 4px solid #27ae60; }
+        .folders { border-left: 4px solid #3498db; }
+        .formats { border-left: 4px solid #e74c3c; }
+        .meetings { border-left: 4px solid #f39c12; }
+        .reports { border-left: 4px solid #9b59b6; }
+        
+        @media (max-width: 768px) {
+            .communication-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Integración de las áreas para el proceso de actualización catastral</h1>
+        </div>
+        
+        <div class="workflow-container">
+            <div class="flow-sequence">
+                <h3>Secuencia del Flujo</h3>
+                <div class="sequence-steps">
+                    <div class="sequence-step">Gerencia y Dirección Proyecto</div>
+                    <div class="sequence-arrow">→</div>
+                    <div class="sequence-step">SIG (Alistamiento)</div>
+                    <div class="sequence-arrow">→</div>
+                    <div class="sequence-step">Reconocimiento</div>
+                    <div class="sequence-arrow">→</div>
+                    <div class="sequence-step">IDEEP</div>
+                    <div class="sequence-arrow">→</div>
+                    <div class="sequence-step">SIG (Validación)</div>
+                    <div class="sequence-arrow">→</div>
+                    <div class="sequence-step">Coordinación Calidad</div>
+                    <div class="sequence-arrow">→</div>
+                    <div class="sequence-step">Gerencia y Dirección Proyecto</div>
+                </div>
+            </div>
+            
+            <div class="workflow-grid">
+                <div class="area-node sig" onclick="toggleInfo('sig')">
+                    <button class="toggle-info">ℹ</button>
+                    <div class="area-title">SIG (Alistamiento)</div>
+                    <div class="area-subtitle">Área Entregante → Reconocimiento predial</div>
+                    
+                    <div class="entregable-info" id="sig-info">
+                        <div class="info-item">
+                            <span class="info-label">Entregable:</span>
+                            <span class="info-value">Cartografía base, codificación, huellas, capas temáticas, croquis</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Medio:</span>
+                            <span class="info-value">Carpeta SIG compartida / IDEEP</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Frecuencia:</span>
+                            <span class="info-value">Cualquier momento</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Observaciones:</span>
+                            <span class="info-value">Se debe validar que toda manzana esté completa y georreferenciada y que cada predio tengo su croquis de ubicación</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="area-node reconocimiento" onclick="toggleInfo('reconocimiento')">
+                    <button class="toggle-info">ℹ</button>
+                    <div class="area-title">Área Catastral - Reconocimiento</div>
+                    <div class="area-subtitle">Área Entregante → Plataforma IDEEP / SIG</div>
+                    
+                    <div class="entregable-info" id="reconocimiento-info">
+                        <div class="info-item">
+                            <span class="info-label">Entregable:</span>
+                            <span class="info-value">Información de campo (alfanumérica, croquis, fotos, ficha predial)</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Medio:</span>
+                            <span class="info-value">Cargue directo en IDEEP / formatos estructurados</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Frecuencia:</span>
+                            <span class="info-value">Diaria</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Observaciones:</span>
+                            <span class="info-value">Revisar consistencia de de la informacion levcantada, códigos, zonas intervenidas</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="area-node ideep" onclick="toggleInfo('ideep')">
+                    <button class="toggle-info">ℹ</button>
+                    <div class="area-title">Desarrollo - IDEEP</div>
+                    <div class="area-subtitle">Área Entregante → SIG (validación)</div>
+                    
+                    <div class="entregable-info" id="ideep-info">
+                        <div class="info-item">
+                            <span class="info-label">Entregable:</span>
+                            <span class="info-value">inf. cargada: Croquis vectorizados, base alfanumérica integrada, capas (dibujos o croquis)</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Medio:</span>
+                            <span class="info-value">Sistema IDEEP / Base de datos - exportacion de la informacion</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Frecuencia:</span>
+                            <span class="info-value">Diario o Cada cierre de zona</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Observaciones:</span>
+                            <span class="info-value">Deben estar todos los predios de la zona cargados y verificados por la coordinacion, la ide podra sacar reportes de abance asi como el estado de gestion (asignado, en tramite, aprobado)</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="area-node sig" onclick="toggleInfo('sig-validacion')">
+                    <button class="toggle-info">ℹ</button>
+                    <div class="area-title">SIG (Validación)</div>
+                    <div class="area-subtitle">Área Entregante → Coordinación de Calidad</div>
+                    
+                    <div class="entregable-info" id="sig-validacion-info">
+                        <div class="info-item">
+                            <span class="info-label">Entregable:</span>
+                            <span class="info-value">Base vectorial validada, muestreos aplicados, inconsistencias topologicas y alfanumericas corregidas, actualización Predial metodo indirecto</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Medio:</span>
+                            <span class="info-value">Exportación validada + reporte</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Frecuencia:</span>
+                            <span class="info-value">Cada bloque finalizado</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Observaciones:</span>
+                            <span class="info-value">Incluye listado de predios con estado final y observaciones</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="area-node calidad" onclick="toggleInfo('calidad')">
+                    <button class="toggle-info">ℹ</button>
+                    <div class="area-title"> Área Catastral - Coordinación de Calidad</div>
+                    <div class="area-subtitle">Área Entregante → Dirección de Proyecto</div>
+                    
+                    <div class="entregable-info" id="calidad-info">
+                        <div class="info-item">
+                            <span class="info-label">Entregable:</span>
+                            <span class="info-value">Reporte de calidad, cantidad de predios validados, Reporte general</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Medio:</span>
+                            <span class="info-value">Informe en plantilla oficial</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Frecuencia:</span>
+                            <span class="info-value">Semanal / mensual</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Observaciones:</span>
+                            <span class="info-value">Muestreo final, alistamiento para la generacion de XTF y cierre predial</span>
+                        </div>
+                    </div>
+                </div>
+
+                
+               <div class="area-node ideep" onclick="toggleInfo('ideep-conversion')">
+    <button class="toggle-info" aria-label="Ver más información" title="Ver más información">ℹ</button>
+    <div class="area-title">Desarrollo - Conversión XTF</div>
+    <div class="area-subtitle">Área Entregante → Coordinación de Calidad</div>
+
+    <div class="entregable-info" id="ideep-conversion-info">
+        <div class="info-item">
+            <span class="info-label">Entregable:</span>
+            <span class="info-value">Muestreo validado para la generación de XTF y cierre de los predios (dibujos o croquis)</span>
+        </div>
+        <div class="info-item">
+            <span class="info-label">Medio:</span>
+            <span class="info-value">Módulo de conversión</span>
+        </div>
+        <div class="info-item">
+            <span class="info-label">Frecuencia:</span>
+            <span class="info-value">Cierre de zona o corte de facturación</span>
+        </div>
+        <div class="info-item">
+            <span class="info-label">Observaciones:</span>
+            <span class="info-value">Se generará un consolidado de la información predial actualizada, validada y cerrada, para la generación del archivo XTF.</span>
+        </div>
+    </div>
+</div>
+
+                
+                <div class="area-node direccion" onclick="toggleInfo('direccion')">
+                    <button class="toggle-info">ℹ</button>
+                    <div class="area-title">Dirección de Proyecto</div>
+                    <div class="area-subtitle">Área Receptora Final</div>
+                    
+                    <div class="entregable-info" id="direccion-info">
+                        <div class="info-item">
+                            <span class="info-label">Función:</span>
+                            <span class="info-value">Recibe reportes finales para toma de decisiones</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Uso:</span>
+                            <span class="info-value">Facturación y cierre técnico del proyecto</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Frecuencia:</span>
+                            <span class="info-value">Según cronograma del proyecto</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="communication-section">
+                <h2>Canales y Formatos de Comunicación</h2>
+                
+                <div class="communication-grid">
+                    <div class="comm-card operational">
+                        <div class="comm-icon">✅</div>
+                        <div class="comm-title">Canal Operativo</div>
+                        <div class="comm-content">
+                            <strong>IDEEP</strong> como plataforma de trabajo conjunto
+                            <ul>
+                                <li>Roles definidos</li>
+                                <li>Seguimiento en tiempo real</li>
+                                <li>Trazabilidad completa</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="comm-card folders">
+                        <div class="comm-icon">🗂️</div>
+                        <div class="comm-title">Carpeta Compartida Estructurada</div>
+                        <div class="comm-content">
+                            <strong>Drive, SharePoint o servidor virtual o NASS </strong> - por zona:
+                            <div class="folder-structure">
+                                <div class="folder-item">📁 01_CartografiaBase_SIG</div>
+                                <div class="folder-item">📁 02_InformacionCampo_Reconocimiento</div>
+                                <div class="folder-item">📁 03_Vectorizacion_IDEEP</div>
+                                <div class="folder-item">📁 04_Validacion_SIG</div>
+                                <div class="folder-item">📁 05_ControlCalidad</div>
+                                <div class="folder-item">📁 06_CierrePredios</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="comm-card formats">
+                        <div class="comm-icon">📑</div>
+                        <div class="comm-title">Formato Estándar de Entregables</div>
+                        <div class="comm-content">
+                            <ul>
+                                <li>Informes de avance</li>
+                                <li>Codificación de zona y manzana</li>
+                                <li>Control de versiones</li>
+                                <li>Registro de cambios</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="comm-card meetings">
+                        <div class="comm-icon">📆</div>
+                        <div class="comm-title">Reuniones Semanales</div>
+                        <div class="comm-content">
+                            Coordinación <strong>SIG-Reconocimiento-IDEEP-Calidad-Gerencia-Direccion de Proyecto</strong>
+                            <ul>
+                                <li>Revisión de avances</li>
+                                <li>Metricas de avance</li>
+                                <li>Retroalimentación</li>
+                                <li>Resolución de problemas</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="comm-card reports">
+                        <div class="comm-icon">🗣️</div>
+                        <div class="comm-title">Reportes Quincenales</div>
+                        <div class="comm-content">
+                            A <strong>Dirección y Gerencia</strong> con foco en:
+                            <ul>
+                                <li>Predios cargados vs. planificados</li>
+                                <li>Calidad y validación</li>
+                                <li>Riesgos o cuellos de botella</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="legend">
+                <h3>Leyenda de Áreas</h3>
+                <div class="legend-item">
+                    <div class="legend-color" style="background-color: #ff6b6b;"></div>
+                    <span>SIG (Alistamiento y Validación) - Preparación y validación cartográfica</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background-color: #4ecdc4;"></div>
+                    <span>Area Catastral - Calidad - Reconocimiento - Trabajo de campo</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background-color: #45b7d1;"></div>
+                    <span>Dersarrollo - IDEEP - Modulo Conversión</span>
+                </div>
+               
+                <div class="legend-item">
+                    <div class="legend-color" style="background-color: #feca57;"></div>
+                    <span>Dirección Proyecto - Supervisión</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        function toggleInfo(areaId) {
+            const infoElement = document.getElementById(areaId + '-info');
+            const allInfoElements = document.querySelectorAll('.entregable-info');
+            
+            // Cerrar todas las otras áreas
+            allInfoElements.forEach(element => {
+                if (element.id !== areaId + '-info') {
+                    element.classList.remove('active');
+                }
+            });
+            
+            // Toggle la actual
+            infoElement.classList.toggle('active');
+        }
+        
+        // Agregar efectos de hover mejorados
+        document.querySelectorAll('.area-node').forEach(node => {
+            node.addEventListener('mouseenter', function() {
+                this.style.transform = 'translateY(-8px) scale(1.02)';
+            });
+            
+            node.addEventListener('mouseleave', function() {
+                this.style.transform = 'translateY(0) scale(1)';
+            });
+        });
+        
+        // Animación de carga
+        window.addEventListener('load', function() {
+            const nodes = document.querySelectorAll('.area-node');
+            nodes.forEach((node, index) => {
+                setTimeout(() => {
+                    node.style.opacity = '0';
+                    node.style.transform = 'translateY(30px)';
+                    node.style.transition = 'all 0.6s ease';
+                    
+                    setTimeout(() => {
+                        node.style.opacity = '1';
+                        node.style.transform = 'translateY(0)';
+                    }, 50);
+                }, index * 100);
+            });
+        });
+    </script>
+</body>
+</html>
